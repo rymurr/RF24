@@ -14,3 +14,4 @@ Todo:
 * mock out as much as possible to unit test interaction with rf chip
 * what about integration testing with actual chip?
 * try and remove python and py-serial dependencies?
+* possibly an AVR simulator or a framework to mock out the arduino bits?
