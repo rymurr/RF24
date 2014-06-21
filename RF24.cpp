@@ -10,7 +10,6 @@
 #include "RF24_config.h"
 #include "RF24.h"
 
-/****************************************************************************/
 
 void RF24::csn(int mode)
 {
@@ -18,6 +17,9 @@ void RF24::csn(int mode)
   // If we assume 2Mbs data rate and 16Mhz clock, a
   // divider of 4 is the minimum we want.
   // CLK:BUS 8Mhz:2Mhz, 16Mhz:4Mhz, or 20Mhz:5Mhz
+  //
+  // todo for this to work in a cross platform way the SPI bits here need to be abstracted
+  // i think the digitalWrite function would have to as well.
 #ifdef ARDUINO
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE0);
@@ -26,20 +28,25 @@ void RF24::csn(int mode)
   digitalWrite(csn_pin,mode);
 }
 
-/****************************************************************************/
-
-void RF24::ce(int level)
+//This and the above method are idential!
+void RF24::ce(int mode)
 {
-  digitalWrite(ce_pin,level);
+  digitalWrite(ce_pin,mode);
 }
-
-/****************************************************************************/
 
 uint8_t RF24::read_register(uint8_t reg, uint8_t* buf, uint8_t len)
 {
   uint8_t status;
 
   csn(LOW);
+  //todo is this true
+  //what does the bitmask even do? for the config of the nrf24l01 this map does nothing for a good reg and does gibberish for a bad reg.
+  // not needed for the default nrf24 config and a valid reg. 
+  // We should validate reg correctly and we may be able to get rid of the bitwise operations
+  // the below command sends the read register command to the chip. We then read off len bytes into a buffer
+  // note we cycle the state of the slave select before reading
+  // 0xff is because we dont care about what data is sent to the slave
+  // todo I don't like the while loop
   status = SPI.transfer( R_REGISTER | ( REGISTER_MASK & reg ) );
   while ( len-- )
     *buf++ = SPI.transfer(0xff);
@@ -49,24 +56,25 @@ uint8_t RF24::read_register(uint8_t reg, uint8_t* buf, uint8_t len)
   return status;
 }
 
-/****************************************************************************/
-
 uint8_t RF24::read_register(uint8_t reg)
 {
   csn(LOW);
   SPI.transfer( R_REGISTER | ( REGISTER_MASK & reg ) );
   uint8_t result = SPI.transfer(0xff);
+  //same as above but only a single byte...why do we care about this method? 
+  //we can remove this and call the above with len=1
+  //note we dont care about status here but we do above...odd
 
   csn(HIGH);
   return result;
 }
 
-/****************************************************************************/
-
 uint8_t RF24::write_register(uint8_t reg, const uint8_t* buf, uint8_t len)
 {
   uint8_t status;
 
+  //same story as above...note the different reg
+  //todo...dont like the while loop
   csn(LOW);
   status = SPI.transfer( W_REGISTER | ( REGISTER_MASK & reg ) );
   while ( len-- )
@@ -77,14 +85,14 @@ uint8_t RF24::write_register(uint8_t reg, const uint8_t* buf, uint8_t len)
   return status;
 }
 
-/****************************************************************************/
-
 uint8_t RF24::write_register(uint8_t reg, uint8_t value)
 {
   uint8_t status;
 
   IF_SERIAL_DEBUG(printf_P(PSTR("write_register(%02x,%02x)\r\n"),reg,value));
 
+  //todo same story, we don't really need this method
+  //todo use the debug in more spots!
   csn(LOW);
   status = SPI.transfer( W_REGISTER | ( REGISTER_MASK & reg ) );
   SPI.transfer(value);
@@ -93,8 +101,11 @@ uint8_t RF24::write_register(uint8_t reg, uint8_t value)
   return status;
 }
 
-/****************************************************************************/
-
+//why the reinterpret_cast, why not just send the uint8_t? probably because of
+//the difficulty in creating a uint8_t pointer for the user?
+//would like to abstract this away a bit I think, i dont like the cast.
+//it looks like it silently chops off anything larger than len in the buf array
+//todo this needs to be much cleaner...
 uint8_t RF24::write_payload(const void* buf, uint8_t len)
 {
   uint8_t status;
@@ -117,8 +128,7 @@ uint8_t RF24::write_payload(const void* buf, uint8_t len)
   return status;
 }
 
-/****************************************************************************/
-
+//same story here
 uint8_t RF24::read_payload(void* buf, uint8_t len)
 {
   uint8_t status;
@@ -140,8 +150,7 @@ uint8_t RF24::read_payload(void* buf, uint8_t len)
   return status;
 }
 
-/****************************************************************************/
-
+//simple use of nrf commands as defined in the datasheet
 uint8_t RF24::flush_rx(void)
 {
   uint8_t status;
@@ -153,8 +162,7 @@ uint8_t RF24::flush_rx(void)
   return status;
 }
 
-/****************************************************************************/
-
+//same
 uint8_t RF24::flush_tx(void)
 {
   uint8_t status;
@@ -166,8 +174,7 @@ uint8_t RF24::flush_tx(void)
   return status;
 }
 
-/****************************************************************************/
-
+//same...can all these be put into a single method?
 uint8_t RF24::get_status(void)
 {
   uint8_t status;
@@ -179,8 +186,8 @@ uint8_t RF24::get_status(void)
   return status;
 }
 
-/****************************************************************************/
-
+//todo dont printf, create string and return?
+//would like to make this more useful
 void RF24::print_status(uint8_t status)
 {
   printf_P(PSTR("STATUS\t\t = 0x%02x RX_DR=%x TX_DS=%x MAX_RT=%x RX_P_NO=%x TX_FULL=%x\r\n"),
@@ -193,8 +200,8 @@ void RF24::print_status(uint8_t status)
           );
 }
 
-/****************************************************************************/
 
+//same
 void RF24::print_observe_tx(uint8_t value)
 {
   printf_P(PSTR("OBSERVE_TX=%02x: POLS_CNT=%x ARC_CNT=%x\r\n"),
@@ -204,8 +211,7 @@ void RF24::print_observe_tx(uint8_t value)
           );
 }
 
-/****************************************************************************/
-
+//same
 void RF24::print_byte_register(const char* name, uint8_t reg, uint8_t qty)
 {
   char extra_tab = strlen_P(name) < 8 ? '\t' : 0;
@@ -215,8 +221,7 @@ void RF24::print_byte_register(const char* name, uint8_t reg, uint8_t qty)
   printf_P(PSTR("\r\n"));
 }
 
-/****************************************************************************/
-
+//same, all are ugly
 void RF24::print_address_register(const char* name, uint8_t reg, uint8_t qty)
 {
   char extra_tab = strlen_P(name) < 8 ? '\t' : 0;
@@ -236,8 +241,7 @@ void RF24::print_address_register(const char* name, uint8_t reg, uint8_t qty)
   printf_P(PSTR("\r\n"));
 }
 
-/****************************************************************************/
-
+//ordered correctly?
 RF24::RF24(uint8_t _cepin, uint8_t _cspin):
   ce_pin(_cepin), csn_pin(_cspin), wide_band(true), p_variant(false), 
   payload_size(32), ack_payload_available(false), dynamic_payloads_enabled(false),
