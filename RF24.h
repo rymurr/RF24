@@ -55,6 +55,7 @@ private:
   uint8_t ack_payload_length; /**< Dynamic size of pending ack payload. */
   uint64_t pipe0_reading_address; /**< Last address set on pipe 0 for reading. */
 
+//why protected?
 protected:
   /**
    * @name Low-level internal interface.
@@ -95,6 +96,7 @@ protected:
    */
   uint8_t read_register(uint8_t reg, uint8_t* buf, uint8_t len);
 
+  //todo are the uint8_ts from nRF24L01.h? If yes than they can be enumized
   /**
    * Read single byte from a register
    *
@@ -165,6 +167,7 @@ protected:
    */
   uint8_t get_status(void);
 
+  //todo what do these do? Are unit8_ts from the nrf header again? Understand the @Warning and fix it
   /**
    * Decode and print the given status to stdout
    *
@@ -195,6 +198,8 @@ protected:
    * @param qty How many successive registers to print
    */
   void print_byte_register(const char* name, uint8_t reg, uint8_t qty = 1);
+  //this should be made 2 methods! same with method below. Should these methods 
+  // print by themselves or return a string which can then be shipped to a print method of choice?
 
   /**
    * Print the name and value of a 40-bit address register to stdout
@@ -217,7 +222,9 @@ protected:
    */
   void toggle_features(void);
   /**@}*/
+  //^^understand this! What features?
 
+  //todo it looks like everything above can be made private. Why protected???
 public:
   /**
    * @name Primary public interface
@@ -236,6 +243,7 @@ public:
    * @param _cspin The pin attached to Chip Select
    */
   RF24(uint8_t _cepin, uint8_t _cspin);
+  //this method should have the same signature regardless of rpi or arduino!
 
   /**
    * Begin operation of the chip
@@ -243,6 +251,7 @@ public:
    * Call this in setup(), before calling any other methods.
    */
   void begin(void);
+  //todo can this be done in the constructor? What happens in this method?
 
   /**
    * Start listening on the pipes opened for reading.
@@ -251,6 +260,8 @@ public:
    * in this mode, without first calling stopListening().  Call
    * isAvailable() to check for incoming traffic, and read() to get it.
    */
+  //todo start/stop/write should be optional where possible. simplify api a bit and
+  //make it harder to cock up
   void startListening(void);
 
   /**
@@ -280,6 +291,7 @@ public:
    */
   bool write( const void* buf, uint8_t len );
 
+  //todo does this need to be public?
   /**
    * Test whether there are bytes available to be read
    *
@@ -287,6 +299,7 @@ public:
    */
   bool available(void);
 
+  //can this be made easier to use? can it be typed better? why size when its always the payloadsize?
   /**
    * Read the payload
    *
@@ -303,6 +316,7 @@ public:
    */
   bool read( void* buf, uint8_t len );
 
+  //the below warning is not something for the user to do
   /**
    * Open a pipe for writing
    *
@@ -323,6 +337,7 @@ public:
    */
   void openWritingPipe(uint64_t address);
 
+  //take care of todo and warning here
   /**
    * Open a pipe for reading
    *
@@ -358,6 +373,7 @@ public:
    *  defaults.
    */
   /**@{*/
+  //todo make the delay more meaningful? why multiples of 250us?
   /**
    * Set the number and delay of retries upon failed submit
    *
@@ -374,6 +390,7 @@ public:
    */
   void setChannel(uint8_t channel);
 
+  //todo take care of todo and warnigs around payload size
   /**
    * Set Static Payload Size
    *
@@ -417,6 +434,7 @@ public:
    */
   void enableAckPayload(void);
 
+  //todo check to make sure this works (above notes make it sound like it doesn't)
   /**
    * Enable dynamically-sized payloads
    *
@@ -427,6 +445,7 @@ public:
    */
   void enableDynamicPayloads(void);
 
+  //point of this method?
   /**
    * Determine whether the hardware is an nRF24L01+ or not.
    *
@@ -445,6 +464,7 @@ public:
    */
   void setAutoAck(bool enable);
 
+  //like others i think pipe can be an enum or type. More type safe and less error prone
   /**
    * Enable or disable auto-acknowlede packets on a per pipeline basis.
    *
@@ -524,6 +544,7 @@ public:
    */
   /**@{*/
 
+  //todo return string and chose your own output
   /**
    * Print a giant block of debugging information to stdout
    *
@@ -531,6 +552,7 @@ public:
    */
   void printDetails(void);
 
+  /todo does low power mode work with IRQ? 
   /**
    * Enter low-power mode
    *
@@ -546,6 +568,7 @@ public:
    */
   void powerUp(void) ;
 
+  //todo simplify this method...no inputs return pipe_num or -1
   /**
    * Test whether there are bytes available to be read
    *
@@ -557,6 +580,7 @@ public:
    */
   bool available(uint8_t* pipe_num);
 
+  //todo check this in more detail...maybe should be the default?
   /**
    * Non-blocking write to the open writing pipe
    *
@@ -572,6 +596,7 @@ public:
    */
   void startWrite( const void* buf, uint8_t len );
 
+  //sort out warning?
   /**
    * Write an ack payload for the specified pipe
    *
@@ -588,6 +613,7 @@ public:
    */
   void writeAckPayload(uint8_t pipe, const void* buf, uint8_t len);
 
+  //is this neccessary? read can return null, -1 etc if no data.
   /**
    * Determine if an ack payload was received in the most recent call to
    * write().
@@ -603,6 +629,7 @@ public:
    */
   bool isAckPayloadAvailable(void);
 
+  //todo this is a strange one. Can simplify this i think! understand how irq works with this library
   /**
    * Call this when you get an interrupt to find out why
    *
@@ -615,6 +642,7 @@ public:
    */
   void whatHappened(bool& tx_ok,bool& tx_fail,bool& rx_ready);
 
+  //todo, what does this mean?
   /**
    * Test whether there was a carrier on the line for the
    * previous listening period.
@@ -625,6 +653,7 @@ public:
    */
   bool testCarrier(void);
 
+  //todo same...can this be combined with test Carrier?
   /**
    * Test whether a signal (carrier or otherwise) greater than
    * or equal to -64dBm is present on the channel. Valid only
@@ -637,6 +666,7 @@ public:
    */
   bool testRPD(void) ;
 
+  //todo ick! get rid of this!
   /**
    * Test whether this is a real radio, or a mock shim for
    * debugging.  Setting either pin to 0xff is the way to
@@ -649,171 +679,6 @@ public:
   /**@}*/
 };
 
-/**
- * @example GettingStarted.pde
- *
- * This is an example which corresponds to my "Getting Started" blog post:
- * <a style="text-align:center" href="http://maniacbug.wordpress.com/2011/11/02/getting-started-rf24/">Getting Started with nRF24L01+ on Arduino</a>. 
- *
- * It is an example of how to use the RF24 class.  Write this sketch to two 
- * different nodes.  Put one of the nodes into 'transmit' mode by connecting 
- * with the serial monitor and sending a 'T'.  The ping node sends the current 
- * time to the pong node, which responds by sending the value back.  The ping 
- * node can then see how long the whole cycle took.
- */
-
-/**
- * @example nordic_fob.pde
- *
- * This is an example of how to use the RF24 class to receive signals from the
- * Sparkfun Nordic FOB.  See http://www.sparkfun.com/products/8602 .
- * Thanks to Kirk Mower for providing test hardware.
- */
-
-/**
- * @example led_remote.pde
- *
- * This is an example of how to use the RF24 class to control a remote
- * bank of LED's using buttons on a remote control.
- *
- * Every time the buttons change on the remote, the entire state of
- * buttons is send to the led board, which displays the state.
- */
-
-/**
- * @example pingpair.pde
- *
- * This is an example of how to use the RF24 class.  Write this sketch to two
- * different nodes, connect the role_pin to ground on one.  The ping node sends
- * the current time to the pong node, which responds by sending the value back.
- * The ping node can then see how long the whole cycle took.
- */
-
-/**
- * @example pingpair_maple.pde 
- *
- * This is an example of how to use the RF24 class on the Maple.  For a more
- * detailed explanation, see my blog post:
- * <a href="http://maniacbug.wordpress.com/2011/12/14/nrf24l01-running-on-maple-3/">nRF24L01+ Running on Maple</a>
- *
- * It will communicate well to an Arduino-based unit as well, so it's not for only Maple-to-Maple communication.
- * 
- * Write this sketch to two different nodes,
- * connect the role_pin to ground on one.  The ping node sends the current time to the pong node,
- * which responds by sending the value back.  The ping node can then see how long the whole cycle
- * took.
- */
-
-/**
- * @example starping.pde
- *
- * This sketch is a more complex example of using the RF24 library for Arduino.
- * Deploy this on up to six nodes.  Set one as the 'pong receiver' by tying the
- * role_pin low, and the others will be 'ping transmit' units.  The ping units
- * unit will send out the value of millis() once a second.  The pong unit will
- * respond back with a copy of the value.  Each ping unit can get that response
- * back, and determine how long the whole cycle took.
- *
- * This example requires a bit more complexity to determine which unit is which.
- * The pong receiver is identified by having its role_pin tied to ground.
- * The ping senders are further differentiated by a byte in eeprom.
- */
-
-/**
- * @example pingpair_pl.pde
- *
- * This is an example of how to do two-way communication without changing
- * transmit/receive modes.  Here, a payload is set to the transmitter within
- * the Ack packet of each transmission.  Note that the payload is set BEFORE
- * the sender's message arrives.
- */
-
-/**
- * @example pingpair_irq.pde
- *
- * This is an example of how to user interrupts to interact with the radio.
- * It builds on the pingpair_pl example, and uses ack payloads.
- */
-
-/**
- * @example pingpair_sleepy.pde
- *
- * This is an example of how to use the RF24 class to create a battery-
- * efficient system.  It is just like the pingpair.pde example, but the
- * ping node powers down the radio and sleeps the MCU after every
- * ping/pong cycle.
- */
-
-/**
- * @example scanner.pde
- *
- * Example to detect interference on the various channels available.
- * This is a good diagnostic tool to check whether you're picking a
- * good channel for your application.
- *
- * Inspired by cpixip.
- * See http://arduino.cc/forum/index.php/topic,54795.0.html
- */
-
-/**
- * @mainpage Driver for nRF24L01(+) 2.4GHz Wireless Transceiver
- *
- * @section Goals Design Goals
- * 
- * This library is designed to be...
- * @li Maximally compliant with the intended operation of the chip
- * @li Easy for beginners to use
- * @li Consumed with a public interface that's similiar to other Arduino standard libraries
- *
- * @section News News
- * 
- * NOW COMPATIBLE WITH ARDUINO 1.0 - The 'master' branch and all examples work with both Arduino 1.0 and earlier versions.  
- * Please <a href="https://github.com/maniacbug/RF24/issues/new">open an issue</a> if you find any problems using it with any version of Arduino.
- *
- * NOW COMPATIBLE WITH MAPLE - RF24 has been tested with the 
- * <a href="http://leaflabs.com/store/#Maple-Native">Maple Native</a>, 
- * and should work with any Maple board.  See the pingpair_maple example.
- * Note that only the pingpair_maple example has been tested on Maple, although
- * the others can certainly be adapted.
- *
- * @section Useful Useful References
- * 
- * Please refer to:
- *
- * @li <a href="http://maniacbug.github.com/RF24/">Documentation Main Page</a>
- * @li <a href="http://maniacbug.github.com/RF24/classRF24.html">RF24 Class Documentation</a>
- * @li <a href="https://github.com/maniacbug/RF24/">Source Code</a>
- * @li <a href="https://github.com/maniacbug/RF24/archives/master">Downloads Page</a>
- * @li <a href="http://www.nordicsemi.com/files/Product/data_sheet/nRF24L01_Product_Specification_v2_0.pdf">Chip Datasheet</a>
- *
- * This chip uses the SPI bus, plus two chip control pins.  Remember that pin 10 must still remain an output, or
- * the SPI hardware will go into 'slave' mode.
- *
- * @section More More Information
- *
- * @subpage FAQ
- *
- * @section Projects Projects
- *
- * Stuff I have built with RF24
- *
- * <img src="http://farm7.staticflickr.com/6044/6307669179_a8d19298a6_m.jpg" width="240" height="160" alt="RF24 Getting Started - Finished Product">
- *
- * <a style="text-align:center" href="http://maniacbug.wordpress.com/2011/11/02/getting-started-rf24/">Getting Started with nRF24L01+ on Arduino</a> 
- *
- * <img src="http://farm8.staticflickr.com/7159/6645514331_38eb2bdeaa_m.jpg" width="240" height="160" alt="Nordic FOB and nRF24L01+">
- *
- * <a style="text-align:center" href="http://maniacbug.wordpress.com/2012/01/08/nordic-fob/">Using the Sparkfun Nordic FOB</a> 
- *
- * <img src="http://farm7.staticflickr.com/6097/6224308836_b9b3b421a3_m.jpg" width="240" height="160" alt="RF Duinode V3 (2V4)">
- *
- * <a href="http://maniacbug.wordpress.com/2011/10/19/sensor-node/">Low-Power Wireless Sensor Node</a>
- *
- * <img src="http://farm8.staticflickr.com/7012/6489477865_b56edb629b_m.jpg" width="240" height="161" alt="nRF24L01+ connected to Leaf Labs Maple Native">
- *
- * <a href="http://maniacbug.wordpress.com/2011/12/14/nrf24l01-running-on-maple-3/">nRF24L01+ Running on Maple</a>
- */
 
 #endif // __RF24_H__
-// vim:ai:cin:sts=2 sw=2 ft=cpp
 

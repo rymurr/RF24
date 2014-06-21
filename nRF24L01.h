@@ -22,6 +22,7 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+//todo can all of these be enums? adds type safety and makes for a cleaner api? I dont know the effect that this would have on an arduino though?
 /* Memory Map */
 #define CONFIG      0x00
 #define EN_AA       0x01
