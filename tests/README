@@ -5,3 +5,5 @@ See "runtests.sh" script inside each sketch dir.  This script is fully compatibl
 git bisest.
 
 Note that this requires python and py-serial
+
+This dir should be converted to a proper test suite
