@@ -6,4 +6,11 @@ git bisest.
 
 Note that this requires python and py-serial
 
-This dir should be converted to a proper test suite
+The tests dir needs some reworking. Not entirely sure yet how but some ideas are below.
+Todo:
+
+* get rid of jam
+* convert to proper test suite
+* mock out as much as possible to unit test interaction with rf chip
+* what about integration testing with actual chip?
+* try and remove python and py-serial dependencies?
