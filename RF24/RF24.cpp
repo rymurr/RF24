@@ -249,8 +249,8 @@ RF24::RF24(uint8_t _cepin, uint8_t _cspin):
 {
 }
 
-/****************************************************************************/
-
+//todo look at todo and get rid of the min below. Anything higher than max channel will be ignored. 
+//just change signature and return bad int
 void RF24::setChannel(uint8_t channel)
 {
   // TODO: This method could take advantage of the 'wide_band' calculation
@@ -260,23 +260,21 @@ void RF24::setChannel(uint8_t channel)
   write_register(RF_CH,min(channel,max_channel));
 }
 
-/****************************************************************************/
-
+//todo same!
 void RF24::setPayloadSize(uint8_t size)
 {
   const uint8_t max_payload_size = 32;
   payload_size = min(size,max_payload_size);
 }
 
-/****************************************************************************/
-
 uint8_t RF24::getPayloadSize(void)
 {
   return payload_size;
 }
 
-/****************************************************************************/
-
+//todo change varnames to something useful
+//note: PROGMEM stores in program memory instead of sram.
+//this whole section needs to be reworked...very odd
 static const char rf24_datarate_e_str_0[] PROGMEM = "1MBPS";
 static const char rf24_datarate_e_str_1[] PROGMEM = "2MBPS";
 static const char rf24_datarate_e_str_2[] PROGMEM = "250KBPS";
@@ -310,6 +308,7 @@ static const char * const rf24_pa_dbm_e_str_P[] PROGMEM = {
   rf24_pa_dbm_e_str_3,
 };
 
+//goodness me...this needs to be fixed!
 void RF24::printDetails(void)
 {
   print_status(get_status());
@@ -331,8 +330,6 @@ void RF24::printDetails(void)
   printf_P(PSTR("CRC Length\t = %S\r\n"),pgm_read_word(&rf24_crclength_e_str_P[getCRCLength()]));
   printf_P(PSTR("PA Power\t = %S\r\n"),pgm_read_word(&rf24_pa_dbm_e_str_P[getPALevel()]));
 }
-
-/****************************************************************************/
 
 void RF24::begin(void)
 {
@@ -358,6 +355,7 @@ void RF24::begin(void)
   // WARNING: If this is ever lowered, either 250KBS mode with AA is broken or maximum packet
   // sizes must never be used. See documentation for a more complete explanation.
   write_register(SETUP_RETR,(B0100 << ARD) | (B1111 << ARC));
+  //todo, understand the above! These are simple bit operations using statics taken from .h file the result will be the same all the time!
 
   // Restore our default PA level
   setPALevel( RF24_PA_MAX ) ;
@@ -366,6 +364,8 @@ void RF24::begin(void)
   // reset our data rate back to default value. This works
   // because a non-P variant won't allow the data rate to
   // be set to 250Kbps.
+  // lol good trick...can I fix this? What about next lines?
+  // These are all set based on the default settings in the constructor. They may not be true if begin happens after some set methods are called!
   if( setDataRate( RF24_250KBPS ) )
   {
     p_variant = true ;
@@ -395,11 +395,11 @@ void RF24::begin(void)
   flush_tx();
 }
 
-/****************************************************************************/
-
 void RF24::startListening(void)
 {
+  //this powers up the chip and sets it to recieve,  we dont change any of the other config bits  
   write_register(CONFIG, read_register(CONFIG) | _BV(PWR_UP) | _BV(PRIM_RX));
+  //this (i think) clears the rx fifo. This cant be right tho...what is this????
   write_register(STATUS, _BV(RX_DR) | _BV(TX_DS) | _BV(MAX_RT) );
 
   // Restore the pipe0 adddress, if exists
