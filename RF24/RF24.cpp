@@ -102,7 +102,7 @@ uint8_t RF24::write_register(uint8_t reg, uint8_t value)
 }
 
 //why the reinterpret_cast, why not just send the uint8_t? probably because of
-//the difficulty in creating a uint8_t pointer for the user?
+//the difficulty in creating a uint8_t pointer for the user? This is a private method tho!
 //would like to abstract this away a bit I think, i dont like the cast.
 //it looks like it silently chops off anything larger than len in the buf array
 //todo this needs to be much cleaner...
@@ -399,10 +399,12 @@ void RF24::startListening(void)
 {
   //this powers up the chip and sets it to recieve,  we dont change any of the other config bits  
   write_register(CONFIG, read_register(CONFIG) | _BV(PWR_UP) | _BV(PRIM_RX));
-  //this (i think) clears the rx fifo. This cant be right tho...what is this????
+  //clears the status of all IRQ bits on the status field...prepares for listening correctly
   write_register(STATUS, _BV(RX_DR) | _BV(TX_DS) | _BV(MAX_RT) );
 
   // Restore the pipe0 adddress, if exists
+  // resets the rx address (i think when this is used to rx from 6 pipes, we need to make sure the rx/tx pipe is set correctly
+  // i am not sure hwo I feel about htis
   if (pipe0_reading_address)
     write_register(RX_ADDR_P0, reinterpret_cast<const uint8_t*>(&pipe0_reading_address), 5);
 
@@ -417,8 +419,6 @@ void RF24::startListening(void)
   delayMicroseconds(130);
 }
 
-/****************************************************************************/
-
 void RF24::stopListening(void)
 {
   ce(LOW);
@@ -426,24 +426,24 @@ void RF24::stopListening(void)
   flush_rx();
 }
 
-/****************************************************************************/
-
+//todo can I address registers specifically? a few more helpers like this?
+//the power up at the start listening step is redundant if we are already powered up
 void RF24::powerDown(void)
 {
   write_register(CONFIG,read_register(CONFIG) & ~_BV(PWR_UP));
 }
-
-/****************************************************************************/
 
 void RF24::powerUp(void)
 {
   write_register(CONFIG,read_register(CONFIG) | _BV(PWR_UP));
 }
 
-/******************************************************************/
-
 bool RF24::write( const void* buf, uint8_t len )
 {
+  //oy where to start...get rid of do while, clean up the flaky notes below
+  //split into async write and sync write giving the user more options
+  //what is going on with the ack payload! 
+  //sort out the whathappened method and the comment at the end of the method
   bool result = false;
 
   // Begin the write
@@ -506,10 +506,11 @@ bool RF24::write( const void* buf, uint8_t len )
 
   return result;
 }
-/****************************************************************************/
 
 void RF24::startWrite( const void* buf, uint8_t len )
 {
+  //why isnt this done somewhere else?
+  //what about the code after Allons?
   // Transmitter power-up
   write_register(CONFIG, ( read_register(CONFIG) | _BV(PWR_UP) ) & ~_BV(PRIM_RX) );
   delayMicroseconds(150);
@@ -523,8 +524,7 @@ void RF24::startWrite( const void* buf, uint8_t len )
   ce(LOW);
 }
 
-/****************************************************************************/
-
+//the size of the dynamic payload
 uint8_t RF24::getDynamicPayloadSize(void)
 {
   uint8_t result = 0;
@@ -537,8 +537,6 @@ uint8_t RF24::getDynamicPayloadSize(void)
   return result;
 }
 
-/****************************************************************************/
-
 bool RF24::available(void)
 {
   return available(NULL);
@@ -550,6 +548,7 @@ bool RF24::available(uint8_t* pipe_num)
 {
   uint8_t status = get_status();
 
+  //oy, clean this up
   // Too noisy, enable if you really want lots o data!!
   //IF_SERIAL_DEBUG(print_status(status));
 
@@ -578,8 +577,6 @@ bool RF24::available(uint8_t* pipe_num)
   return result;
 }
 
-/****************************************************************************/
-
 bool RF24::read( void* buf, uint8_t len )
 {
   // Fetch the payload
@@ -588,8 +585,6 @@ bool RF24::read( void* buf, uint8_t len )
   // was this the last of the data available?
   return read_register(FIFO_STATUS) & _BV(RX_EMPTY);
 }
-
-/****************************************************************************/
 
 void RF24::whatHappened(bool& tx_ok,bool& tx_fail,bool& rx_ready)
 {
@@ -603,8 +598,6 @@ void RF24::whatHappened(bool& tx_ok,bool& tx_fail,bool& rx_ready)
   rx_ready = status & _BV(RX_DR);
 }
 
-/****************************************************************************/
-
 void RF24::openWritingPipe(uint64_t value)
 {
   // Note that AVR 8-bit uC's store this LSB first, and the NRF24L01(+)
@@ -616,8 +609,6 @@ void RF24::openWritingPipe(uint64_t value)
   const uint8_t max_payload_size = 32;
   write_register(RX_PW_P0,min(payload_size,max_payload_size));
 }
-
-/****************************************************************************/
 
 static const uint8_t child_pipe[] PROGMEM =
 {
@@ -656,8 +647,7 @@ void RF24::openReadingPipe(uint8_t child, uint64_t address)
     write_register(EN_RXADDR,read_register(EN_RXADDR) | _BV(pgm_read_byte(&child_pipe_enable[child])));
   }
 }
-
-/****************************************************************************/
+//todo oy! and below use a variable not a magic number
 
 void RF24::toggle_features(void)
 {
@@ -667,8 +657,7 @@ void RF24::toggle_features(void)
   csn(HIGH);
 }
 
-/****************************************************************************/
-
+//fix me! skip the if and add a pipe, add a function to do all!
 void RF24::enableDynamicPayloads(void)
 {
   // Enable dynamic payload throughout the system
@@ -692,8 +681,6 @@ void RF24::enableDynamicPayloads(void)
 
   dynamic_payloads_enabled = true;
 }
-
-/****************************************************************************/
 
 void RF24::enableAckPayload(void)
 {
@@ -719,9 +706,9 @@ void RF24::enableAckPayload(void)
 
   write_register(DYNPD,read_register(DYNPD) | _BV(DPL_P1) | _BV(DPL_P0));
 }
+//yikes! fix the above method!
 
-/****************************************************************************/
-
+//we didnt check that above is enabled before trying this!
 void RF24::writeAckPayload(uint8_t pipe, const void* buf, uint8_t len)
 {
   const uint8_t* current = reinterpret_cast<const uint8_t*>(buf);
@@ -736,8 +723,7 @@ void RF24::writeAckPayload(uint8_t pipe, const void* buf, uint8_t len)
   csn(HIGH);
 }
 
-/****************************************************************************/
-
+//why do we set ack_payload_available to false here, what if this were called multiple times?
 bool RF24::isAckPayloadAvailable(void)
 {
   bool result = ack_payload_available;
@@ -745,15 +731,15 @@ bool RF24::isAckPayloadAvailable(void)
   return result;
 }
 
-/****************************************************************************/
 
+//sketchy method of deriving the below
 bool RF24::isPVariant(void)
 {
   return p_variant ;
 }
 
-/****************************************************************************/
 
+//magic numbers! 
 void RF24::setAutoAck(bool enable)
 {
   if ( enable )
@@ -762,8 +748,7 @@ void RF24::setAutoAck(bool enable)
     write_register(EN_AA, 0);
 }
 
-/****************************************************************************/
-
+//swallow instead of error! argh! why not call this from the above 6 times? much harder?
 void RF24::setAutoAck( uint8_t pipe, bool enable )
 {
   if ( pipe <= 6 )
@@ -781,28 +766,24 @@ void RF24::setAutoAck( uint8_t pipe, bool enable )
   }
 }
 
-/****************************************************************************/
-
 bool RF24::testCarrier(void)
 {
   return ( read_register(CD) & 1 );
 }
-
-/****************************************************************************/
 
 bool RF24::testRPD(void)
 {
   return ( read_register(RPD) & 1 ) ;
 }
 
-/****************************************************************************/
-
+//use switch and clean this up, handle errors better!
 void RF24::setPALevel(rf24_pa_dbm_e level)
 {
   uint8_t setup = read_register(RF_SETUP) ;
   setup &= ~(_BV(RF_PWR_LOW) | _BV(RF_PWR_HIGH)) ;
 
   // switch uses RAM (evil!)
+  // not true?
   if ( level == RF24_PA_MAX )
   {
     setup |= (_BV(RF_PWR_LOW) | _BV(RF_PWR_HIGH)) ;
@@ -822,14 +803,14 @@ void RF24::setPALevel(rf24_pa_dbm_e level)
   else if ( level == RF24_PA_ERROR )
   {
     // On error, go to maximum PA
-    setup |= (_BV(RF_PWR_LOW) | _BV(RF_PWR_HIGH)) ;
+    setup |= ( _BV(RF_PWR_LOW) | _BV(RF_PWR_HIGH)) ;
   }
 
   write_register( RF_SETUP, setup ) ;
 }
 
-/****************************************************************************/
 
+//same story
 rf24_pa_dbm_e RF24::getPALevel(void)
 {
   rf24_pa_dbm_e result = RF24_PA_ERROR ;
@@ -856,8 +837,7 @@ rf24_pa_dbm_e RF24::getPALevel(void)
   return result ;
 }
 
-/****************************************************************************/
-
+//i like that its verified, same comment as above tho
 bool RF24::setDataRate(rf24_datarate_e speed)
 {
   bool result = false;
@@ -903,8 +883,7 @@ bool RF24::setDataRate(rf24_datarate_e speed)
   return result;
 }
 
-/****************************************************************************/
-
+//same story
 rf24_datarate_e RF24::getDataRate( void )
 {
   rf24_datarate_e result ;
@@ -930,8 +909,7 @@ rf24_datarate_e RF24::getDataRate( void )
   return result ;
 }
 
-/****************************************************************************/
-
+//same story
 void RF24::setCRCLength(rf24_crclength_e length)
 {
   uint8_t config = read_register(CONFIG) & ~( _BV(CRCO) | _BV(EN_CRC)) ;
@@ -953,8 +931,7 @@ void RF24::setCRCLength(rf24_crclength_e length)
   write_register( CONFIG, config ) ;
 }
 
-/****************************************************************************/
-
+//same story
 rf24_crclength_e RF24::getCRCLength(void)
 {
   rf24_crclength_e result = RF24_CRC_DISABLED;
@@ -971,19 +948,15 @@ rf24_crclength_e RF24::getCRCLength(void)
   return result;
 }
 
-/****************************************************************************/
-
 void RF24::disableCRC( void )
 {
   uint8_t disable = read_register(CONFIG) & ~_BV(EN_CRC) ;
   write_register( CONFIG, disable ) ;
 }
 
-/****************************************************************************/
 void RF24::setRetries(uint8_t delay, uint8_t count)
 {
  write_register(SETUP_RETR,(delay&0xf)<<ARD | (count&0xf)<<ARC);
 }
 
-// vim:ai:cin:sts=2 sw=2 ft=cpp
 
