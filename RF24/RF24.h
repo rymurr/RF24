@@ -552,7 +552,7 @@ public:
    */
   void printDetails(void);
 
-  /todo does low power mode work with IRQ? 
+  //todo does low power mode work with IRQ? 
   /**
    * Enter low-power mode
    *
